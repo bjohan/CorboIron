@@ -1,4 +1,5 @@
 EESchema Schematic File Version 2
+LIBS:CorboIron-rescue
 LIBS:power
 LIBS:device
 LIBS:transistors
@@ -43,17 +44,6 @@ Comment2 ""
 Comment3 ""
 Comment4 ""
 $EndDescr
-$Comp
-L DIL32 P4
-U 1 1 56ED3F0B
-P 1650 6800
-F 0 "P4" H 1650 7750 50  0000 C CNN
-F 1 "DIL32" V 1650 6800 50  0000 C CNN
-F 2 "Housings_DIP:DIP-32_W15.24mm_LongPads" H 1650 6800 50  0001 C CNN
-F 3 "" H 1650 6800 50  0000 C CNN
-	1    1650 6800
-	1    0    0    -1  
-$EndComp
 Text Label 900  6250 0    60   ~ 0
 REF
 Text Label 900  7250 0    60   ~ 0
@@ -2617,4 +2607,15 @@ Wire Wire Line
 	900  8000 800  8000
 Wire Wire Line
 	1250 8000 1100 8000
+$Comp
+L DIL32-RESCUE-CorboIron P4
+U 1 1 56EF51CE
+P 1650 6800
+F 0 "P4" H 1650 7750 50  0000 C CNN
+F 1 "DIL32" V 1650 6800 50  0000 C CNN
+F 2 "" H 1650 6800 50  0000 C CNN
+F 3 "" H 1650 6800 50  0000 C CNN
+	1    1650 6800
+	1    0    0    -1  
+$EndComp
 $EndSCHEMATC
