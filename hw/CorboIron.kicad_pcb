@@ -5,7 +5,7 @@
     (no_connects 0)
     (area 116.684238 56.84 211.2 163.905001)
     (thickness 1.6)
-    (drawings 29)
+    (drawings 30)
     (tracks 1597)
     (zones 0)
     (modules 101)
@@ -37,7 +37,7 @@
   )
 
   (setup
-    (last_trace_width 0.3)
+    (last_trace_width 0.25)
     (user_trace_width 0.1524)
     (user_trace_width 0.3)
     (user_trace_width 0.5)
@@ -3496,6 +3496,9 @@
     )
   )
 
+  (gr_text "Four channel \nsolder iron controller" (at 147.32 94.742) (layer F.SilkS)
+    (effects (font (size 1.5 1.5) (thickness 0.3)))
+  )
   (gr_text "LEDS INDICATE OVER HEAT PROTECTION" (at 139.7 161.798) (layer F.SilkS)
     (effects (font (size 1.5 1.5) (thickness 0.3)))
   )
