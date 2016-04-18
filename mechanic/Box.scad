@@ -287,16 +287,16 @@ tol = 1;
 overlap = 10;
 height = 20;
 
-bottomSection(ix, iy, iz, t);
+//bottomSection(ix, iy, iz, t);
 topSection(ix, iy, iz, t, tol, overlap, height);
-/*module bottomSupports(){
+module bottomSupports(){
 translate([100, -8, 0])
 cylinder(42.2,3,3);
 translate([140, -8, 0])
 cylinder(42.2,3,3);
 translate([105, iy, 0])
 cylinder(19.9,3,3);
-}*/
+}
 //translate([75, -40, 5])
 //        rotate(45,[1,0,0]) 
 //            display();
