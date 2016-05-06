@@ -3,9 +3,9 @@ extern "C"
 #include "uart_command_lib.h"
 #include "corbomite.h"
 }
-int ch1TempPin = A7;
+int ch1TempPin = A0;
 int chargePumpPin = 9;
-int heaterPin = 11;
+int heaterPin = 7;
 int heatLed = 13;
 int heaterLevel = 200;
 int rawAdcValue = 1024;
@@ -70,10 +70,11 @@ void setup()
 {
   pinMode(ch1TempPin, INPUT);
   Serial.begin(115200);
-
+  analogReference(INTERNAL);
   analogWrite(chargePumpPin, 127);
   pinMode(heatLed, OUTPUT);
   pinMode(ch1TempPin, INPUT);
+  pinMode(heaterPin, OUTPUT);
 }
 
 
@@ -95,12 +96,19 @@ float readAdc()
 
 void setHeatSafe(int level)
 {
-  heaterLevel = level;
+digitalWrite(heaterPin, 0);
+ /* heaterLevel = level;
   if(rawAdcValue < 700){
-    analogWrite(heaterPin, heaterLevel);
+    if(level > 0) 
+        digitalWrite(heaterPin, 1);
+    else
+        digitalWrite(heaterPin, 0);
+    //analogWrite(heaterPin, heaterLevel);
   } else {
-    analogWrite(heaterPin, 0);
+    digitalWrite(heaterPin, 0);
+    //analogWrite(heaterPin, 0);
   }
+*/
 }
 
 void printValue(char *name, float value)
@@ -184,6 +192,7 @@ void regulatePidWithCompensation(float target, float dT)
   //for(i = 0 ; i < 4 ; i++)
   //  acc+=readAdc();
   temp=toCelcius(readAdc());
+  printValue("Raw", temp);
   //temp=toCelcius(float(acc)/4.0);
   float error = target-temp/*+setpointIncrease*/;
   float tFlow;
@@ -214,7 +223,7 @@ void regulatePidWithCompensation(float target, float dT)
   
   hlev = hlev > 255 ? 255 : hlev;
   hlev = hlev < 0 ? 0 : hlev;
-
+  
   
 //    Serial.println("looping");
   
