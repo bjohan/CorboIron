@@ -123,6 +123,6 @@ mainHousing(mainHousingInsideX+2*t, mainHousingInsideY+2*t ,mainHousingInsideZ+2
 
 placedPowerSupply();
 
-
-
-display();
+translate([10, 80, 60])
+rotate([-60, 0, 0])
+    display();
