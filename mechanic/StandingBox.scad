@@ -4,6 +4,10 @@ mainHousingInsideY = 110;
 mainHousingInsideZ = 210;
 t = 3;
 
+dispTiltOffs = 20;
+dispProjHeight = 50;
+dispRecess = 40;
+topFoldHeight = 20;
 
 module powerSupply()
 {
@@ -73,7 +77,6 @@ module displayVolumes(){
 
 
 
-
 module display()
 {
     difference(){
@@ -91,7 +94,6 @@ module pcb(){
         cube([20, 92, 17]);
 }
 
-
 module mainHousing(sx, sy, sz, t){
     fanHoleY=70;
     fanHoleZ=30;
@@ -100,8 +102,8 @@ module mainHousing(sx, sy, sz, t){
         cube([sx, sy, sz]);
         translate([t, t, t])
             cube([sx-2*t, sy-t+1, sz-2*t]);
-        translate([-1, t+fanHoleY, t+fanHoleZ])
-            rotate([0, 0, 90])
+        translate([sx/2, sy/2+10, sz+1])
+            rotate([90, 0, 0])
                 fanHoles(t+2);    
         for(n = [0:15]){
             translate([sx-t-1, 20+t, 20+t+exhaustSeparation*n])
@@ -112,17 +114,82 @@ module mainHousing(sx, sy, sz, t){
     
 }
 
-module placedPowerSupply(){
-    translate([t, t, t])
-        rotate([0, -90, -90])
-            powerSupply();
+
+function getDispAngle() =
+    atan2(dispProjHeight, dispRecess);
+
+module frontPanelOnSide(height, width, t){
+    //dispTiltOffs = 10;
+    //dispProjHeight = 50;
+    //dispRecess = 30;
+    //topFoldHeight = 20;http://www.di.se/artiklar/2016/6/5/schweiz-rostar-om-medborgarlon/
+    dto = dispTiltOffs;
+    poly = [    [0,0],
+                [dispTiltOffs,0],
+                [dispProjHeight+dto,dispRecess],
+                //[height,dispRecess],
+                [height-topFoldHeight, dispRecess],
+                [height-topFoldHeight, 0],
+                [height, 0],
+                [height, t],
+                [height-topFoldHeight+t, t],
+                
+                [height-topFoldHeight+t,dispRecess+t],
+    
+                //[height,dispRecess+t],
+                [dispProjHeight+dto,dispRecess+t],
+                [dispTiltOffs,+t],
+                [0,t]];
+    linear_extrude(width)
+        polygon(points=poly);
+    
+}
+
+module placedFrontPanel(height, width, depth, t){
+    translate([t, depth+t, t])
+    rotate([0, -90, 180]){
+        frontPanelOnSide(height, width, t);
+    }
+}
+
+module placedDisplay(){
+translate([t+(mainHousingInsideX-98)/2, 68, 68])
+    rotate(-getDispAngle(),[1, 0, 0])
+        rotate([0, 0, 180])
+            translate([-98,-60, 0]){
+                display();
+               
+            }
+}
+
+module placedDisplayHoles(){
+translate([t+(mainHousingInsideX-98)/2, 68, 68])
+    rotate(-getDispAngle(),[1, 0, 0])
+        rotate([0, 0, 180])
+            translate([-98,-60, 0]){
+                displayHoles(10, 3/2);
+            }
+}
+        
+module placedFrontPanelWithHoles(height, width, depth, t){
+    difference(){
+        placedFrontPanel(height, width, depth, t);
+        placedDisplay();
+        placedDisplayHoles();
+    }
 }
 
 
-mainHousing(mainHousingInsideX+2*t, mainHousingInsideY+2*t ,mainHousingInsideZ+2*t, t);
+module placedPowerSupply(t){
+    translate([t, t, t])
+        rotate([0,-90,-90])
+            powerSupply();
+}
 
-placedPowerSupply();
+%mainHousing(mainHousingInsideX+2*t, mainHousingInsideY+t, mainHousingInsideZ+2*t,t);
 
-translate([10, 80, 60])
-rotate([-60, 0, 0])
-    display();
+placedFrontPanelWithHoles(mainHousingInsideZ, mainHousingInsideX, mainHousingInsideY, t);
+
+placedPowerSupply(t);
+
+//placedDisplay();
