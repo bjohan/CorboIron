@@ -1,4 +1,4 @@
-
+//$fn=200;
 mainHousingInsideX = 110;
 mainHousingInsideY = 110;
 mainHousingInsideZ = 210;
@@ -186,7 +186,89 @@ module placedPowerSupply(t){
             powerSupply();
 }
 
-%mainHousing(mainHousingInsideX+2*t, mainHousingInsideY+t, mainHousingInsideZ+2*t,t);
+
+module penHolderMainBody(frontAngle){
+    length = 100;
+    height = 30;
+    width = mainHousingInsideX/2;
+    //frontAngle = 40;
+    difference(){
+    cube([width, length, height]);
+    translate([0, length, 0])
+        rotate([frontAngle, 0, 0])
+            cube(2*[height, height, height]);
+    }
+}
+
+module penHolderWithPrintHoles(angle){
+    dia = 16;
+    difference(){
+        penHolderMainBody(angle);
+        translate([dia, 77, dia/2])
+            rotate([angle, 0, 0])
+                cylinder(100 , dia/2, dia/2);
+        
+        translate([mainHousingInsideX/2-dia, 77, dia/2])
+            rotate([angle, 0, 0])
+                cylinder(100 , dia/2, dia/2);
+    }
+}
+
+
+module penHolderDryClean(angle){
+    dia = 44;
+    d=47;
+    dt = d+30;
+    angle=20;
+    hd = (dia/2+2)/sqrt(2);
+    difference(){
+        penHolderMainBody(angle);
+        
+        translate([mainHousingInsideX/4, dia/2+8, 10])
+            rotate([angle, 0, 0]){
+                cylinder(100 , dia/2-2, dia/2-2);
+                translate([0,0,10])
+                    cylinder(100 , dia/2, dia/2);
+                translate([hd, hd, 0])
+                    cylinder(100, 3/2, 3/2);
+                translate([hd, -hd, 0])
+                    cylinder(100, 3/2, 3/2);
+                translate([-hd, hd, 0])
+                    cylinder(100, 3/2, 3/2);
+                translate([-hd, -hd, 0])
+                    cylinder(100, 3/2, 3/2);
+                
+            }
+
+    translate([0, d, 30])
+        rotate([angle, 0, 0])
+            translate([0, -dt, 0]){
+                cube([mainHousingInsideX/2, dt, 30]);
+            }
+
+    }
+    
+}
+
+
+module penHolder(){
+  
+   
+    //translate([0, 0, 30])
+    
+    intersection(){
+        penHolderDryClean(0);
+        penHolderWithPrintHoles(40);
+    }
+}
+
+translate([0, 120, 0])
+    penHolder();
+
+translate([0, 73, 175])
+    rotate([-90,0,0])
+        penHolder();
+mainHousing(mainHousingInsideX+2*t, mainHousingInsideY+t, mainHousingInsideZ+2*t,t);
 
 placedFrontPanelWithHoles(mainHousingInsideZ, mainHousingInsideX, mainHousingInsideY, t);
 
