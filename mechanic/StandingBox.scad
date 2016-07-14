@@ -1,6 +1,6 @@
 //$fn=200;
-mainHousingInsideX = 110;
-mainHousingInsideY = 110;
+mainHousingInsideX = 120;
+mainHousingInsideY = 120;
 mainHousingInsideZ = 210;
 t = 3;
 
@@ -114,6 +114,38 @@ module mainHousing(sx, sy, sz, t){
     
 }
 
+module mainHousingFrontPanelScrewHoles(sx, sy, sz, t){
+    translate([t+10, sy+t, t+5]){
+        for(n = [0:5]){
+            translate([20*n, 0, 0])
+                rotate([90, 0, 0])
+                    cylinder(25, 1.5, 1.5);
+        }
+    }
+    
+        translate([t+10, sy+t, sz-t-5]){
+        for(n = [0:5]){
+            translate([20*n, 0, 0])
+                rotate([90, 0, 0])
+                    cylinder(25, 1.5, 1.5);
+        }
+    }
+}
+
+
+module mainHousingWithFrontPanelHoles(sx, sy, sz, t){
+    difference(){
+        union(){
+            mainHousing(sx, sy, sz, t);
+            translate([t, sy-10-t, t])
+                cube([sx-2*t, 10,10]);
+            translate([t, sy-10-t, sz-10-t])
+                cube([sx-2*t, 10,10]);
+            
+        }
+        mainHousingFrontPanelScrewHoles(sx, sy, sz, t);
+    }
+}
 
 function getDispAngle() =
     atan2(dispProjHeight, dispRecess);
@@ -146,14 +178,25 @@ module frontPanelOnSide(height, width, t){
 }
 
 module placedFrontPanel(height, width, depth, t){
+    /*t = 3;
+
+dispTiltOffs = 20;
+dispProjHeight = 50;
+dispRecess = 40;
+topFoldHeight = 20;*/
     translate([t, depth+t, t])
+    
     rotate([0, -90, 180]){
         frontPanelOnSide(height, width, t);
+        translate([dispProjHeight+dispTiltOffs, dispRecess+t,0])
+            cube([10, 10, width]);
+        translate([height-topFoldHeight-10+t, dispRecess+t,0])
+            cube([10, 10, width]);
     }
 }
 
 module placedDisplay(){
-translate([t+(mainHousingInsideX-98)/2, 68, 68])
+translate([t+(mainHousingInsideX-98)/2, 78, 68])
     rotate(-getDispAngle(),[1, 0, 0])
         rotate([0, 0, 180])
             translate([-98,-60, 0]){
@@ -163,7 +206,7 @@ translate([t+(mainHousingInsideX-98)/2, 68, 68])
 }
 
 module placedDisplayHoles(){
-translate([t+(mainHousingInsideX-98)/2, 68, 68])
+translate([t+(mainHousingInsideX-98)/2, 78, 68])
     rotate(-getDispAngle(),[1, 0, 0])
         rotate([0, 0, 180])
             translate([-98,-60, 0]){
@@ -176,6 +219,7 @@ module placedFrontPanelWithHoles(height, width, depth, t){
         placedFrontPanel(height, width, depth, t);
         placedDisplay();
         placedDisplayHoles();
+        mainHousingFrontPanelScrewHoles(mainHousingInsideX+2*t, mainHousingInsideY+t, mainHousingInsideZ+2*t,t);
     }
 }
 
@@ -188,8 +232,8 @@ module placedPowerSupply(t){
 
 
 module penHolderMainBody(frontAngle){
-    length = 100;
-    height = 30;
+    length = 110;
+    height = 35;
     width = mainHousingInsideX/2;
     //frontAngle = 40;
     difference(){
@@ -201,14 +245,14 @@ module penHolderMainBody(frontAngle){
 }
 
 module penHolderWithPrintHoles(angle){
-    dia = 16;
+    dia = 11.8;
     difference(){
         penHolderMainBody(angle);
-        translate([dia, 77, dia/2])
+        translate([dia, 90+2.1, dia/2])
             rotate([angle, 0, 0])
                 cylinder(100 , dia/2, dia/2);
         
-        translate([mainHousingInsideX/2-dia, 77, dia/2])
+        translate([mainHousingInsideX/2-dia, 90+2.1, dia/2])
             rotate([angle, 0, 0])
                 cylinder(100 , dia/2, dia/2);
     }
@@ -216,18 +260,19 @@ module penHolderWithPrintHoles(angle){
 
 
 module penHolderDryClean(angle){
-    dia = 44;
-    d=47;
-    dt = d+30;
+    h = 35;
+    dia = 56;
+    d=55;
+    dt = d+h;
     angle=20;
     hd = (dia/2+2)/sqrt(2);
     difference(){
         penHolderMainBody(angle);
         
-        translate([mainHousingInsideX/4, dia/2+8, 10])
+        translate([mainHousingInsideX/4, dia/2+5, 10])
             rotate([angle, 0, 0]){
                 cylinder(100 , dia/2-2, dia/2-2);
-                translate([0,0,10])
+                translate([0,0,13])
                     cylinder(100 , dia/2, dia/2);
                 translate([hd, hd, 0])
                     cylinder(100, 3/2, 3/2);
@@ -240,7 +285,7 @@ module penHolderDryClean(angle){
                 
             }
 
-    translate([0, d, 30])
+    translate([0, d, h])
         rotate([angle, 0, 0])
             translate([0, -dt, 0]){
                 cube([mainHousingInsideX/2, dt, 30]);
@@ -262,16 +307,32 @@ module penHolder(){
     }
 }
 
-translate([0, 120, 0])
+
+module printFrontPanel(){
+    rotate([0, 90, 0])
+    placedFrontPanelWithHoles(mainHousingInsideZ, mainHousingInsideX, mainHousingInsideY, t);
+    translate([10, 120, -t-2])
+        cylinder(2,20,20);
+    translate([210, 120, -t-2])
+        cylinder(2,20,20);
+    translate([80, 120-40, -t-2])
+        cylinder(2,20,20);
+    translate([180, 120-40, -t-2])
+        cylinder(2,20,20);
+}
+
+printFrontPanel();
+
+/*translate([0, 120, 0])
     penHolder();
 
-translate([0, 73, 175])
+translate([0, 73, 185])
     rotate([-90,0,0])
-        penHolder();
-mainHousing(mainHousingInsideX+2*t, mainHousingInsideY+t, mainHousingInsideZ+2*t,t);
+        penHolder();*/
+//mainHousingWithFrontPanelHoles(mainHousingInsideX+2*t, mainHousingInsideY+t, mainHousingInsideZ+2*t,t);
 
-placedFrontPanelWithHoles(mainHousingInsideZ, mainHousingInsideX, mainHousingInsideY, t);
+//placedFrontPanelWithHoles(mainHousingInsideZ, mainHousingInsideX, mainHousingInsideY, t);
 
-placedPowerSupply(t);
+//placedPowerSupply(t);
 
 //placedDisplay();
