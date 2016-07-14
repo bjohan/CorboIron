@@ -14,7 +14,7 @@ int setPoint = 0;
 float sP;
 float sI;
 float sD;
-LiquidCrystal_I2C lcd(0x20, 2, 1, 0, 4, 5, 6, 7, 3, POSITIVE);
+LiquidCrystal_I2C lcd(0x27, 2, 1, 0, 4, 5, 6, 7, 3, POSITIVE);
 extern "C" {
 void setSetPoint( int32_t temp)
 {
@@ -76,6 +76,10 @@ void setup()
   pinMode(heatLed, OUTPUT);
   pinMode(ch1TempPin, INPUT);
   pinMode(heaterPin, OUTPUT);
+  lcd.begin(16,2);
+  lcd.backlight();
+  lcd.setCursor(0,0);
+  lcd.print("Hello!11");
 }
 
 
