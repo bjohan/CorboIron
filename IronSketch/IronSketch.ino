@@ -1,3 +1,4 @@
+#include <LiquidCrystal_I2C.h>
 extern "C"
 {
 #include "uart_command_lib.h"
@@ -13,7 +14,7 @@ int setPoint = 0;
 float sP;
 float sI;
 float sD;
-
+LiquidCrystal_I2C lcd(0x20, 2, 1, 0, 4, 5, 6, 7, 3, POSITIVE);
 extern "C" {
 void setSetPoint( int32_t temp)
 {
