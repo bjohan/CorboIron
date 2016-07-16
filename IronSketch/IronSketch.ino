@@ -69,17 +69,31 @@ const CorbomiteEntry * const entries[] PROGMEM = {
 }
 void setup()
 {
-  pinMode(ch1TempPin, INPUT);
-  Serial.begin(115200);
-  analogReference(INTERNAL);
-  analogWrite(chargePumpPin, 127);
-  pinMode(heatLed, OUTPUT);
-  pinMode(ch1TempPin, INPUT);
-  pinMode(heaterPin, OUTPUT);
-  lcd.begin(16,2);
-  lcd.backlight();
-  lcd.setCursor(0,0);
-  lcd.print("Hello!11");
+        pinMode(ch1TempPin, INPUT);
+        Serial.begin(115200);
+        analogReference(INTERNAL);
+        analogWrite(chargePumpPin, 127);
+        pinMode(heatLed, OUTPUT);
+        pinMode(ch1TempPin, INPUT);
+        pinMode(heaterPin, OUTPUT);
+        lcd.begin(20,4);
+        lcd.backlight();
+        lcd.setCursor(0,0);
+        lcd.print("Welcome to CorboIron");
+  
+        lcd.setCursor(0,2);
+        lcd.print("Version 0.000");
+
+        lcd.setCursor(0,3);
+        for(int i = 0 ; i < 20 ; i++){
+                lcd.print('-');
+                delay(50);
+        }
+        lcd.setCursor(0,3);
+        for(int i = 0 ; i < 20 ; i++){
+                lcd.print(' ');
+                delay(50);
+        }
 }
 
 
@@ -89,31 +103,19 @@ float readAdc()
   float valAcc = 0;
   analogWrite(heaterPin, 0);
   delay(1);
-  for(int i = 0 ; i < 64 ; i++){
+  for(int i = 0 ; i < 32 ; i++){
     val = analogRead(ch1TempPin);
     valAcc += val;
   }
   analogWrite(heaterPin, heaterLevel);
   rawAdcValue = val;
-  return float(valAcc)/64.0;
+  return float(valAcc)/32.0;
 }
 
 
 void setHeatSafe(int level)
 {
-digitalWrite(heaterPin, 0);
- /* heaterLevel = level;
-  if(rawAdcValue < 700){
-    if(level > 0) 
-        digitalWrite(heaterPin, 1);
-    else
         digitalWrite(heaterPin, 0);
-    //analogWrite(heaterPin, heaterLevel);
-  } else {
-    digitalWrite(heaterPin, 0);
-    //analogWrite(heaterPin, 0);
-  }
-*/
 }
 
 void printValue(char *name, float value)
@@ -139,46 +141,6 @@ int powerToDuty(float power)
 #define MIN_MASS 10.0 //joules per celcius
 #define AMBIENT  23.0
 #define RTH_NOM_AIR ((270.0-AMBIENT)/5.0) //Kelvin per watt
-
-/*void regulateModel(float target, float dT)
-{
-  static long long int nextTime = 0;
-  static float energyFilter = 0;
-  const float energyAlpha = 0.01;
-  float hlev = 20;
-  float temp = toCelcius(readAdc());
-  float diff = target-temp;
-  float totalThermalEnergyToAdd = diff/MIN_MASS;
-  float thermalEnergyToAdd = totalThermalEnergyToAdd - energyFilter;
-  
-  if(thermalEnergyToAdd < 0 )
-    thermalEnergyToAdd = 0;
-  
-  float extraPower = 0.1*thermalEnergyToAdd/dT;
-  
-
-    
-  energyFilter = energyFilter*(1.0-energyAlpha)+thermalEnergyToAdd;
-  
-  float radPower = (target-AMBIENT)/RTH_NOM_AIR;
-  
-  hlev = powerToDuty(radPower+extraPower);
-  //hlev = powerToDuty(5.0);
-  
-  while(millis() < nextTime);
-//    Serial.println("looping");
-  
-  setHeatSafe(hlev);
-  nextTime = millis()+1000*dT;
-  printValue("target: ", target);
-  printValue(" prad ", radPower);
-  printValue(" temperature: ", temp);
-  printValue(" extraPower: ", extraPower);
-  printValue(" filtered energy: ", energyFilter);
-  printValue(" tot therm e: ", totalThermalEnergyToAdd);
-  printValue(" Pow: ", (hlev/255)*12*12/3.6);
-  Serial.println("");
-}*/
 
 void regulatePidWithCompensation(float target, float dT)
 {
@@ -255,125 +217,119 @@ void regulatePidWithCompensation(float target, float dT)
   Serial.println("");*/
 }
 
-/*void regulatePid(float target, float dT)
+int ftoa(char *buf, float remainder, int i, int d)
 {
+        unsigned int cont = 1;
+        unsigned int bufPos = 0;
+        int mag;
+        float divisor, divident, roundup;
+        
+        if(remainder < 0){
+                buf[bufPos++]='-';
+                remainder = - remainder;
+        }
 
-  static long long int nextTime = 0;
-  static float lastError = 0;
-  static float integral = 0;
-  static float lastPower = 0;
-  
-  float temp = toCelcius(readAdc());
-  float error = target-temp;
-  float tFlow;
-  
-  tFlow = (lastPower-5*temp/(250));
-  
-  float pTerm = error*0.2;
-  float iTerm = integral*0.08;
-  float dTerm = -(error -lastError)*0.01/dT;
-  
-  if(iTerm < 40.0)
-    integral += error*dT;
-  if (error < -15)
-    integral = 0;
-  if (error > 5 and integral < 0)
-     integral = 0;
-  //integral = integral > 3000 ? 3000 : integral;
-  lastError = error;  
-  
-  float control = pTerm+iTerm+dTerm;
-  int hlev = powerToDuty(control);
-  hlev = hlev > 255 ? 255 : hlev;
-  hlev = hlev < 0 ? 0 : hlev;
-
-  
-  while(millis() < nextTime);
-//    Serial.println("looping");
-  
-  setHeatSafe(hlev);
-  nextTime = millis()+1000*dT;
-  lastPower = (float(hlev)/255.0)*12.0*12.0/3.6;
-  printValue("target: ", target);
-  printValue(" temperature: ", temp);
-  printValue(" tFlow: ", tFlow);
-  printValue(" power: ", control);
-  printValue(" pwm: ", hlev);
-  printValue(" p: ", pTerm);
-  printValue(" i: ", iTerm);
-  printValue(" d: ", dTerm);
-  printValue(" Pow: ", lastPower);
-  Serial.println("");
+        roundup = 0.5*pow(10, 0-float(d));
+        remainder += roundup;
+        mag = floor(log10(fabsf(remainder)));
+        mag = mag < i-1 ? i-1 : mag;
+        while(cont){
+                divisor = pow(10, mag);
+                divident = floor(remainder/divisor);
+                remainder = remainder-divident*divisor;
+                
+                if(mag == -1)
+                        buf[bufPos++]='.';
+                buf[bufPos++]='0'+divident;
+                mag = mag -1;
+                if (mag < -d){
+                        cont = 0;
+                }
+                
+        }
+        return bufPos;
 }
 
-void regulate(int target)
+
+void displayChannel(uint8_t ch, float setPoint, float actual, float power)
+{ //                      01234567890123456789
+  //const char templ[] = "0>383C(383.1C) 30.3W";
+  char toPrint2[64];
+  sprintf(toPrint2, "%d>%03dC(000.0C) 00.0W", ch, int(setPoint));
+  ftoa(toPrint2+7, actual, 3,1);
+  ftoa(toPrint2+15, power, 2,1);
+
+  lcd.setCursor(0,ch);
+  lcd.print(toPrint2);
+
+}
+
+float regulateChannel(uint8_t ch, float setPoint, float temperature)
 {
-  static float integral = 0;
-  static float lastVal = 0;
-  float alpha = 1.0/20.0;
-  
-  float p = 0.5;
-  float i = 0.01;
-  float d = 0;
-  float pterm;
-  float iterm;
-  float dterm;
-  
-  float val = readAdc();
-  float err = target - val;
-  integral += err; //+ integral*(1.0-alpha);
-  float delta = val - lastVal;
-  
-  pterm = err*p;
-  iterm = integral*i;
-  dterm = delta*d;
-  float hlev = 0;
-  hlev = pterm+iterm+dterm;
-  hlev = hlev > 255 ? 255 : hlev;
-  
-  
-  printValue("Value: ", val);
-  printValue(" error: ", err);
-  printValue(" integral: ", integral);
-  printValue(" delta: ", delta);
-  
-  printValue(" P: ", pterm);
-  printValue(" I: ", iterm);
-  printValue(" D: ", dterm);
-  printValue(" S: ", hlev);
-  printValue(" Pow: ", (hlev/255)*12*12/3.6);
-  Serial.println("");
-  if(hlev > 0)
-    digitalWrite(heatLed, HIGH);
-  else
-      digitalWrite(heatLed, LOW);
-  setHeatSafe(hlev);
-  lastVal = val;
-}*/
+        if(temperature < setPoint)
+                return 1.0f;
+        else
+                return 0.0f;
+}
+ 
+
+#define MAX_POWER ((12.0f*12.0f/2.0f)*(200.0f/250.0f))
+
+
+void computeChannel(uint8_t ch)
+{
+        float powerFactor; 
+        static long last = 0;
+        float temperature = toCelcius(readAdc());
+        float target = 100;
+        powerFactor = regulateChannel(ch, target, temperature);
+        displayChannel(ch, int(target), temperature, powerFactor);
+        printValue("Time: ", millis()-last);
+        Serial.println("");
+        while(millis()-last < 50);
+        heaterLevel = 250*powerFactor;
+        while(millis()-last < 0);
+        last = millis();
+}
 
 void loop()
 {
-/*  int hlev;
-  int val = readAdc();
-  if(val < 600){
-    
-    hlev = 200;
-  } else {
-     digitalWrite(heatLed, LOW);
-     hlev = 0;
-  }
-  setHeatSafe(hlev);*/
-  regulatePidWithCompensation(setPoint,0.05);
- /* Serial.print("addr1 ");
-  Serial.print((uint32_t)&sensorTemperature);
-  Serial.print("addr2 ");
-  Serial.print((uint32_t)&initcmd);
-  Serial.print("addr3 ");
-  Serial.print((uint32_t)&last);
-  Serial.print("addr4 ");
-  Serial.print((uint32_t)&entries);*/
-  commandLine();
-  //delay(200);
+        long t0;
+        float target = 100;
+        float temperatures[4];
+        float powerFactors[4];
+        int milliseconds[4]; 
+        long time;
+        uint8_t ch;
+        t0 = millis();
+        for(ch = 0 ; ch < 4 ; ch ++){
+                temperatures[ch] = toCelcius(readAdc());
+                powerFactors[ch] = regulateChannel(ch, target, temperatures[ch]);
+                milliseconds[ch] = powerFactors[ch]*100; 
+                //computeChannel(ch);
+        }
+
+        for(ch = 0 ; ch < 4 ; ch ++){
+                displayChannel(ch, int(target), temperatures[ch], powerFactors[ch]); 
+        }
+
+        time = millis() -t0;
+        while(time <= 100){
+                for(ch = 0 ; ch < 4 ; ch ++){
+                        if(milliseconds[ch] <= time)
+                                digitalWrite(heaterPin, 1);
+                        else
+                                digitalWrite(heaterPin, 0);
+                }
+                time = millis() -t0;
+
+        }
+
+        //heaterLevel = 250*powerFactors[0];
+        printValue("Time: ", millis()-t0);
+        Serial.println("");
+
+        commandLine();
 }
 
 void platformSerialWrite(const char *buf, uint16_t len)
