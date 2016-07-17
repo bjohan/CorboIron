@@ -4,6 +4,8 @@ extern "C"
 #include "uart_command_lib.h"
 #include "corbomite.h"
 }
+int tempPins[] = {A0, A1, A6, A7};
+int heaterPins[] = {7, 6, 5, 4};
 int ch1TempPin = A0;
 int chargePumpPin = 9;
 int heaterPin = 7;
@@ -76,6 +78,7 @@ void setup()
         pinMode(heatLed, OUTPUT);
         pinMode(ch1TempPin, INPUT);
         pinMode(heaterPin, OUTPUT);
+        digitalWrite(heaterPin, 0);
         lcd.begin(20,4);
         lcd.backlight();
         lcd.setCursor(0,0);
@@ -97,21 +100,26 @@ void setup()
 }
 
 
-float readAdc()
+float readAdc(int ch)
 {
   int val;
   float valAcc = 0;
-  analogWrite(heaterPin, 0);
+  //analogWrite(heaterPin, 0);
   delay(1);
-  for(int i = 0 ; i < 32 ; i++){
-    val = analogRead(ch1TempPin);
+  for(int i = 0 ; i < 64 ; i++){
+    val = analogRead(tempPins[ch]);
     valAcc += val;
   }
-  analogWrite(heaterPin, heaterLevel);
+  //analogWrite(heaterPin, heaterLevel);
   rawAdcValue = val;
-  return float(valAcc)/32.0;
+  return float(valAcc)/64.0;
 }
 
+
+void setHeat(int ch, uint8_t en)
+{
+        digitalWrite(heaterPins[ch], en);
+}
 
 void setHeatSafe(int level)
 {
@@ -142,7 +150,7 @@ int powerToDuty(float power)
 #define AMBIENT  23.0
 #define RTH_NOM_AIR ((270.0-AMBIENT)/5.0) //Kelvin per watt
 
-void regulatePidWithCompensation(float target, float dT)
+/*void regulatePidWithCompensation(float target, float dT)
 {
 
   static long long int nextTime = 0;
@@ -161,7 +169,7 @@ void regulatePidWithCompensation(float target, float dT)
   temp=toCelcius(readAdc());
   printValue("Raw", temp);
   //temp=toCelcius(float(acc)/4.0);
-  float error = target-temp/*+setpointIncrease*/;
+  float error = target-temp;
   float tFlow;
   
   tFlow = (lastPower-5*temp/(250));
@@ -169,9 +177,6 @@ void regulatePidWithCompensation(float target, float dT)
   float pTerm = error*sP/dT;
   float iTerm = integral*sI/dT;
   float dTerm = (error -lastError)*sD/dT;
-/*  float pTerm = error*1.5;
-  float iTerm = integral*0.3;
-  float dTerm = (error -lastError)*0.7/dT;*/
   
   if(iTerm < 40.0)
     integral += error*dT;
@@ -186,7 +191,7 @@ void regulatePidWithCompensation(float target, float dT)
   setpointIncrease = controlPower*2;
   setpointIncrease = setpointIncrease > 0 ? setpointIncrease : 0;
   
-  int hlev = powerToDuty(controlPower/*+setpointIncrease*/);
+  int hlev = powerToDuty(controlPower);
   
   hlev = hlev > 255 ? 255 : hlev;
   hlev = hlev < 0 ? 0 : hlev;
@@ -203,7 +208,7 @@ void regulatePidWithCompensation(float target, float dT)
   transmitAnalogIn(&iPowerWidget, (int) (iTerm*100.0));
   transmitAnalogIn(&dPowerWidget, (int) (dTerm*100.0));
   transmitAnalogIn(&temperature, (int) (temp*64.0));
-  /*printValue("target: ", target);
+  printValue("target: ", target);
   printValue(" value: ", target+setpointIncrease);
   printValue(" spi:", setpointIncrease);
   printValue(" temperature: ", temp);
@@ -214,8 +219,8 @@ void regulatePidWithCompensation(float target, float dT)
   printValue(" i: ", iTerm);
   printValue(" d: ", dTerm);
   printValue(" Pow: ", lastPower);
-  Serial.println("");*/
-}
+  Serial.println("");
+}*/
 
 int ftoa(char *buf, float remainder, int i, int d)
 {
@@ -266,36 +271,22 @@ void displayChannel(uint8_t ch, float setPoint, float actual, float power)
 
 float regulateChannel(uint8_t ch, float setPoint, float temperature)
 {
-        if(temperature < setPoint)
-                return 1.0f;
-        else
-                return 0.0f;
+        float error = setPoint-temperature;
+        if (error > 0.0){
+                error = error * 0.01;
+                return error > 0.2 ? 0.2 : error;
+        }
+        return 0;
 }
  
 
 #define MAX_POWER ((12.0f*12.0f/2.0f)*(200.0f/250.0f))
 
 
-void computeChannel(uint8_t ch)
-{
-        float powerFactor; 
-        static long last = 0;
-        float temperature = toCelcius(readAdc());
-        float target = 100;
-        powerFactor = regulateChannel(ch, target, temperature);
-        displayChannel(ch, int(target), temperature, powerFactor);
-        printValue("Time: ", millis()-last);
-        Serial.println("");
-        while(millis()-last < 50);
-        heaterLevel = 250*powerFactor;
-        while(millis()-last < 0);
-        last = millis();
-}
-
 void loop()
 {
         long t0;
-        float target = 100;
+        float target = 200;
         float temperatures[4];
         float powerFactors[4];
         int milliseconds[4]; 
@@ -303,23 +294,23 @@ void loop()
         uint8_t ch;
         t0 = millis();
         for(ch = 0 ; ch < 4 ; ch ++){
-                temperatures[ch] = toCelcius(readAdc());
+                temperatures[ch] = toCelcius(readAdc(ch));
                 powerFactors[ch] = regulateChannel(ch, target, temperatures[ch]);
-                milliseconds[ch] = powerFactors[ch]*100; 
-                //computeChannel(ch);
+                milliseconds[ch] = int(powerFactors[ch]*100.0f); 
         }
 
         for(ch = 0 ; ch < 4 ; ch ++){
-                displayChannel(ch, int(target), temperatures[ch], powerFactors[ch]); 
+                displayChannel(ch, int(target), temperatures[ch], powerFactors[ch]*MAX_POWER); 
         }
-
+        while(millis()-t0 < 50);
+        t0 = millis();
         time = millis() -t0;
         while(time <= 100){
                 for(ch = 0 ; ch < 4 ; ch ++){
-                        if(milliseconds[ch] <= time)
-                                digitalWrite(heaterPin, 1);
+                        if(time < milliseconds[ch])
+                                setHeat(ch, 1);
                         else
-                                digitalWrite(heaterPin, 0);
+                                setHeat(ch, 0);
                 }
                 time = millis() -t0;
 
