@@ -321,7 +321,7 @@ module printFrontPanel(){
         cylinder(2,20,20);
 }
 
-printFrontPanel();
+//printFrontPanel();
 
 /*translate([0, 120, 0])
     penHolder();
@@ -329,9 +329,9 @@ printFrontPanel();
 translate([0, 73, 185])
     rotate([-90,0,0])
         penHolder();*/
-//mainHousingWithFrontPanelHoles(mainHousingInsideX+2*t, mainHousingInsideY+t, mainHousingInsideZ+2*t,t);
+mainHousingWithFrontPanelHoles(mainHousingInsideX+2*t, mainHousingInsideY+t, mainHousingInsideZ+2*t,t);
 
-//placedFrontPanelWithHoles(mainHousingInsideZ, mainHousingInsideX, mainHousingInsideY, t);
+placedFrontPanelWithHoles(mainHousingInsideZ, mainHousingInsideX, mainHousingInsideY, t);
 
 //placedPowerSupply(t);
 
