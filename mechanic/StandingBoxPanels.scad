@@ -786,6 +786,12 @@ module zTube(l, ri, ro){
     }
 }
 
+module zCone(l, ril, riu, wt){
+    difference(){
+        zCylinder(l,ril+wt,riu+wt);
+        zCylinder(l, ril, riu);
+    }
+}
 /*module crossOver(){
     hull(){
     cube([30,10,1]);
@@ -812,8 +818,8 @@ module connectorStrainRelief(){
             
         }
             cube([connSX, connSY, connSZ]);
-            translate([stop,stop,-wall])
-            cube([connSX-2*stop, connSY-2*stop, connSZ]);
+            translate([stop*0,0*stop,-wall])
+            cube([connSX-0*2*stop, connSY-0.5*2*stop, connSZ]);
         }
     //zTube(20, 6/2, 6/2+wall);
 
@@ -845,14 +851,39 @@ module connectorStrainRelief(){
     }
     
     translate([-wall+(connSX+2*wall)/3, /*-wall+*/connSY/2, connSZ+transitionHeight])
-        zTube(benReliefHeght,cableRadius,cableRadius+wall);
+        zTube(benReliefHeght,cableRadius,cableRadius+wall-0.5);
     translate([-wall+2*(connSX+2*wall)/3, /*-wall+*/connSY/2, connSZ+transitionHeight])
-        zTube(benReliefHeght,cableRadius,cableRadius+wall);
+        zTube(benReliefHeght,cableRadius,cableRadius+wall-0.5);
 }
 
 
 
-connectorStrainRelief();
+
+module solderPenMainBody(){
+    zTube(3.5,9.25/2,8.5/2+1.5);
+    translate([0,0,3.5])
+        zTube(50,8.5/2,8.5/2+1.5);
+}
+
+module solderPenTpuSleeveLower(){
+    $fn=100;
+    zTube(12, 9/2, 15/2);
+    translate([0,0,12])
+        zTube(20, 11/2, 15/2);
+}
+module solderPenTpuSleeveUpper(){
+    $fn=100;
+    zTube(35, 11/2, 15/2);
+    translate([0,0,35])
+        zCone(15, 11/2, 3.5, 2);
+    translate([0,0,50])
+        zCone(25, 3.5, 3.5, 2);
+}
+//solderPenTpuSleeveLower();
+//translate([0,0,40])
+    solderPenTpuSleeveUpper();
+//solderPenMainBody();
+//connectorStrainRelief();
 //crossOver();
 //backPanel();
 //pcbPanel();
