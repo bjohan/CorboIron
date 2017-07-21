@@ -108,6 +108,8 @@ void setup()
         analogReference(DEFAULT);
         analogWrite(chargePumpPin, 127);
 	initLcd();
+	//digitalWrite(7, LOW);
+	pinMode(7, OUTPUT);
 }
 
 
@@ -119,13 +121,13 @@ float readAdc(int ch)
 	return 0;
   //analogWrite(heaterPin, 0);
   delay(1);
-  for(int i = 0 ; i < 256 ; i++){
+  for(int i = 0 ; i < 64 ; i++){
     val = analogRead(tempPins[ch]);
     valAcc += val;
   }
   //analogWrite(heaterPin, heaterLevel);
   rawAdcValue = val;
-  return float(valAcc)/256.0;
+  return float(valAcc)/64.0;
 }
 
 float inv_adc(float x){
@@ -141,7 +143,21 @@ float inv_tip(float x){
 }
 
 float code_to_c(float c){
-	return inv_tip(inv_amp(inv_adc(c)))*1.03-27.0;
+	return inv_tip(inv_amp(inv_adc(c)))*1.03-13.0;
+}
+
+void setHeater(uint8_t ch, uint8_t state){
+	int pin;
+	switch(ch){
+		case 0:
+			pin = 7;
+		default:
+			return;
+	}
+	if(state == 0)
+		digitalWrite(pin, LOW);
+	else
+		digitalWrite(pin, HIGH);
 }
 
 int ftoa(char *buf, float remainder, int i, int d)
@@ -191,23 +207,30 @@ void displayChannel(uint8_t ch, float setPoint, float actual, float power)
 
 }
 
+float regulateChannel(float target, float current){
+	return (target - current)*3;
+}
+
 void loop()
 {
 	uint8_t ch;
         float temperatures[4];
         float powerFactors[4];
         int milliseconds[4]; 
-	float target = 0;
+	float target = 190;
         for(ch = 0 ; ch < 4 ; ch ++){
                 //temperatures[ch] = toCelcius(readAdc(ch));
-                temperatures[ch] = readAdc(ch);
-                //powerFactors[ch] = regulateChannel(ch, target, temperatures[ch]);
+                temperatures[ch] = code_to_c(readAdc(ch));
+                powerFactors[ch] = regulateChannel(target, temperatures[ch]);
                 milliseconds[ch] = int(powerFactors[ch]*100.0f); 
         }
 
         for(ch = 0 ; ch < 4 ; ch ++){
-                displayChannel(ch, int(target), code_to_c(temperatures[ch]), powerFactors[ch]); 
+                displayChannel(ch, int(target), temperatures[ch], powerFactors[ch]); 
         }
+	
+	//setHeater(0, 1);
+	//digitalWrite(7, HIGH);
 	transmitAnalogIn(&temperature, temperatures[0]);
 	delay(10);
         commandLine();
