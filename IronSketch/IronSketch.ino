@@ -56,6 +56,8 @@ ANA_IN("power", "W", "0", "40", 0, 255, powerWidget);
 ANA_IN("ppower", "W", "0", "40", 0, 4000, pPowerWidget); 
 ANA_IN("ipower", "W", "0", "40", 0, 4000, iPowerWidget); 
 ANA_IN("dpower", "W", "0", "40", 0, 4000, dPowerWidget); 
+
+
 const CorbomiteEntry last PROGMEM = {LASTTYPE, "", 0};
 const EventData initEvent PROGMEM = {registeredEntries};
 
@@ -100,6 +102,55 @@ void initLcd(){
 
 }
 
+
+
+
+
+void setupAdc(){
+	ADCSRA = 1<< ADEN | 1<<ADIE | 1<<ADPS2 | 1 << ADPS1; //Enable ADC, interrupts and prescale adcclk by 64
+	ADMUX = 1<<REFS0 | 1<<MUX3 | 1<<MUX2 | 1<<MUX1; //Set REFS to 01 which is the AVCC pin
+	sei();
+	ADCSRA |= 1<<ADSC; //Start first conversion
+}
+
+
+// Value to store analog result
+volatile int adc_values[4] = {0,0,0,0};
+volatile uint16_t pwm_values[4] = {0,0,0,0};
+volatile uint8_t ch = 0;
+volatile uint8_t samps = 0;
+volatile uint8_t skip_samp = 15;
+volatile uint8_t over_samp = 64;
+volatile int sampCount = 0;
+ISR(ADC_vect){
+  uint8_t c;
+  samps++;
+  if(samps > skip_samp)
+  	adc_values[ch] += ADCL | (ADCH << 8);
+  
+  if(samps >= over_samp+skip_samp){
+  	samps = 0;
+	ch++;
+	ch = ch & 0x3;
+	if(ch == 0)
+		sampCount++;
+  }
+  for(c = 0 ; c < 4 ; c++){
+	if(c == ch){
+		digitalWrite(heaterPins[c], LOW);
+	} else {
+		if(samps < pwm_values[c])
+			digitalWrite(heaterPins[c], HIGH);
+		else
+			digitalWrite(heaterPins[c], LOW);
+	}
+  }
+  //analogVal = ADCL | (ADCH << 8);
+  //analogVal++; 
+  ADCSRA |= 1<<ADSC;
+}
+
+
 void setup()
 {
         pinMode(ch1TempPin, INPUT);
@@ -110,24 +161,24 @@ void setup()
 	initLcd();
 	//digitalWrite(7, LOW);
 	pinMode(7, OUTPUT);
+        setupAdc();
 }
 
 
 float readAdc(int ch)
 {
   int val;
-  float valAcc = 0;
+  int valAcc = 0;
   if(ch > 3)
 	return 0;
   //analogWrite(heaterPin, 0);
-  delay(1);
-  for(int i = 0 ; i < 64 ; i++){
+  for(int i = 0 ; i < 1 ; i++){
     val = analogRead(tempPins[ch]);
     valAcc += val;
   }
   //analogWrite(heaterPin, heaterLevel);
   rawAdcValue = val;
-  return float(valAcc)/64.0;
+  return float(valAcc)/1.0;
 }
 
 float inv_adc(float x){
@@ -218,22 +269,38 @@ void loop()
         float powerFactors[4];
         int milliseconds[4]; 
 	float target = 190;
-        for(ch = 0 ; ch < 4 ; ch ++){
-                //temperatures[ch] = toCelcius(readAdc(ch));
-                temperatures[ch] = code_to_c(readAdc(ch));
-                powerFactors[ch] = regulateChannel(target, temperatures[ch]);
-                milliseconds[ch] = int(powerFactors[ch]*100.0f); 
-        }
+	float temp = 0;
+	static long rate = 0;
+	unsigned long t0 = micros();
+	unsigned long ts;
+	unsigned long conv = 0;
+	unsigned long corr = 0;
+        /*for(ch = 0 ; ch < 4 ; ch ++){
+		ts = micros();
+		temp = readAdc(ch);
+		conv += micros()-ts;
+		
+		ts = micros();
+                temperatures[ch] = code_to_c(temp);
+		corr += micros()-ts;
 
-        for(ch = 0 ; ch < 4 ; ch ++){
+                powerFactors[ch] = regulateChannel(target, temperatures[ch]);
+        }*/
+
+        /*for(ch = 0 ; ch < 4 ; ch ++){
                 displayChannel(ch, int(target), temperatures[ch], powerFactors[ch]); 
-        }
+        }*/
 	
 	//setHeater(0, 1);
 	//digitalWrite(7, HIGH);
-	transmitAnalogIn(&temperature, temperatures[0]);
+	//transmitAnalogIn(&temperature, temperatures[0]);
 	delay(10);
         commandLine();
+	Serial.print("Time for adc conversion ");Serial.print(conv);
+	Serial.print(". Time for correction "); Serial.print(corr);
+	Serial.print("Iteration time "); Serial.print(micros()-rate) ; 
+	Serial.print(" aval: "); Serial.print(sampCount);Serial.println("");
+	rate = micros();
 }
 
 void platformSerialWrite(const char *buf, uint16_t len)
