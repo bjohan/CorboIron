@@ -22,6 +22,8 @@ extern "C"
 #define encoder0PinB 3
 volatile int encoder0Pos = 0;
 
+float vOffset[4] = {1.538, 0.013, 0.750, 0.154};
+
 int tempPins[] = {A0, A1, A6, A7};
 int heaterPins[] = {7, 6, 5, 4};
 int ch1TempPin = A0;
@@ -51,7 +53,7 @@ struct tipState {
 };
 
 
-volatile struct tipState ts[4] = {{0, 0, 0, 0, 300}, {0, 0, 0, 0, 250}, {0, 0, 0, 0, 250}, {0, 0, 0, 0, 250} };
+volatile struct tipState ts[4] = {{0, 0, 0, 0, 150}, {0, 0, 0, 0, 150}, {0, 0, 0, 0, 150}, {0, 0, 0, 0, 150} };
 
 LiquidCrystal_I2C lcd(0x27, 2, 1, 0, 4, 5, 6, 7, 3, POSITIVE);
 extern "C" {
@@ -188,6 +190,65 @@ void doEncoderB(){
   }
 
 } 
+#define K_t 0.0000160
+#define M_t (-0.00096)
+
+#define K_a 1200.0
+#define M_a (-1.1)
+
+#define K_c (1023.0/4.98)
+#define M_c (-6.0)
+
+
+#define K_tot (K_t*K_a*K_c)
+#define M_tot (M_t*K_a*K_c + M_a*K_c + M_c)
+
+
+float tomV(float x, int ch){
+    return 1000.0*(5.0*x/1024.0)/525.0+vOffset[ch];
+}
+ 
+float amp(float x){
+	return x*1200.0-1.1;
+}
+
+float adc(float x){
+	return x*1023.0/4.98 - 6.0;
+}
+
+float tip(float x){
+	return x*0.0000160-0.00096;
+}
+
+
+float complete(float c){
+    return (((c+13.0)/1.03)*K_tot+M_tot);
+}
+
+float inv_complete(float c){
+    return ((c-M_tot)/K_tot)*1.03-13.0;
+}
+
+float inv_adc(float x){
+	return (x+6.0)/(1023.0/4.98);
+}
+
+float inv_amp(float x){
+	return (x+1.1)/1200.0;
+}
+
+float inv_tip(float x){
+	return (x+0.00096)/0.0000160-6.0;
+}
+
+float code_to_c(float c){
+	return inv_tip(inv_amp(inv_adc(c)))*1.03-13.0;
+}
+
+float c_to_code(float c){
+	return adc(amp(tip((c+13.0)/1.03)));
+}
+
 
 void setupAdc(){
 	ADCSRA = 1<< ADEN | 1<<ADIE | 1<<ADPS2 | 1 << ADPS1; //Enable ADC, interrupts and prescale adcclk by 64
@@ -219,7 +280,10 @@ void setup()
     // encoder pin on interrupt 1 (pin 3)
     attachInterrupt(1, doEncoderB, CHANGE);  
 
-
+    for(int ch = 0; ch < 4 ; ch++){
+        ts[ch].adc_value_target = complete(ts[ch].temperature_target);
+        pinMode(heaterPins[ch], OUTPUT);
+    }
 }
 
 int ftoa(char *buf, float remainder, int i, int d)
@@ -274,7 +338,16 @@ ISR(ADC_vect){
   		samps = 0;
 		ch_read++;
 		ch_read = ch_read & 0x3;
-		ADMUX = (ADMUX & 0xF0) | ch_read;
+        switch(ch_read){
+            case 0:
+		        ADMUX = (ADMUX & 0xF0) | 0; break;
+            case 1:
+		        ADMUX = (ADMUX & 0xF0) | 1; break;
+            case 2:
+		        ADMUX = (ADMUX & 0xF0) | 6; break;
+            case 3:
+		        ADMUX = (ADMUX & 0xF0) | 7; break;
+        }
 		if(ch_read == 0)
 			sampCount++;
   	}
@@ -311,60 +384,6 @@ ISR(ADC_vect){
 }
 
 
-#define K_t 0.0000160
-#define M_t (-0.00096)
-
-#define K_a 1200.0
-#define M_a (-1.1)
-
-#define K_c (1023.0/4.98)
-#define M_c (-6.0)
-
-
-#define K_tot (K_t*K_a*K_c)
-#define M_tot (M_t*K_a*K_c + M_a*K_c + M_c)
- 
-float amp(float x){
-	return x*1200.0-1.1;
-}
-
-float adc(float x){
-	return x*1023.0/4.98 - 6.0;
-}
-
-float tip(float x){
-	return x*0.0000160-0.00096;
-}
-
-
-float complete(float c){
-    return (((c+13.0)/1.03)*K_tot+M_tot);
-}
-
-float inv_complete(float c){
-    return ((c-M_tot)/K_tot)*1.03-13.0;
-}
-
-float inv_adc(float x){
-	return (x+6.0)/(1023.0/4.98);
-}
-
-float inv_amp(float x){
-	return (x+1.1)/1200.0;
-}
-
-float inv_tip(float x){
-	return (x+0.00096)/0.0000160-6.0;
-}
-
-float code_to_c(float c){
-	return inv_tip(inv_amp(inv_adc(c)))*1.03-13.0;
-}
-
-float c_to_code(float c){
-	return adc(amp(tip((c+13.0)/1.03)));
-}
-
 
 void cursorLogic(){
     static uint8_t lastButtonState;
@@ -377,15 +396,12 @@ void cursorLogic(){
         newT = start + encoder0Pos;
         if(newT < 120){
             newT = 120;
-            start ;
             encoder0Pos = newT-start;
         }if(newT > 400){
             newT = 400;
             encoder0Pos = newT-start;
         }
         ts[cursorChannel].temperature_target = newT;
-    
-
     }
     if(buttonState != lastButtonState){
             if(buttonState != 0){
@@ -429,19 +445,19 @@ float regulateChannel(float target, float current){
 	return (target - current)*3;
 }
 
-void controlChannel(volatile struct tipState *ts){
-	int error = ts->adc_value_target - ts->adc_value;
+void controlChannel(volatile struct tipState *tip){
+	int error = tip->adc_value_target - tip->adc_value;
 	if(error < 0)
 		error = 0;
     if(error > 128)
         error = 128;
-	ts->pwm_value = error;
+	tip->pwm_value = error*1;
 } 
 
-void printControlChannel(volatile struct tipState *ts){
-	Serial.print("tadc "); Serial.print(ts->adc_value_target);
-	Serial.print(" cadc "); Serial.print(ts->adc_value);
-	Serial.print(" pwm "); Serial.print(ts->pwm_value);
+void printControlChannel(volatile struct tipState *tip){
+	Serial.print("tadc "); Serial.print(tip->adc_value_target);
+	Serial.print(" cadc "); Serial.print(tip->adc_value);
+	Serial.print(" pwm "); Serial.print(tip->pwm_value);
 	//Serial.print(" temp "); Serial.print(ts->temperature);
     //&Serial.println("");
 }
@@ -450,38 +466,21 @@ void loop()
 {
 	uint16_t ch;
 	float target = 190;
-	//float temp = 0;
     cursorLogic();
 	static long rate = 0;
-        for(ch = 0 ; ch < 1 ; ch ++){
-		//temp = ((float) ts[ch].adc_value)/64.0;// readAdc(ch);
-		//ts[ch].temperature = code_to_c(ts[ch].adc_value);
-		ts[ch].temperature = inv_complete(ts[ch].adc_value);
-		/*if(ts[ch].temperature_target > 0){
-	                //ts[ch].adc_value_target = c_to_code(ts[ch].temperature_target);
-	                ts[ch].adc_value_target = complete(ts[ch].temperature_target);
-			ts[ch].temperature_target = -ts[ch].temperature_target;
-		}*/
+    for(ch = 0 ; ch < 4 ; ch ++){
+	    ts[ch].temperature = inv_complete(ts[ch].adc_value);
 		controlChannel(&ts[ch]);
-		/*if(ts[ch].temperature < target)
-			ts[ch].pwm_value = 70;
-		else
-			ts[ch].pwm_value = 0;*/
-                //powerFactors[ch] = regulateChannel(target, ts[ch].temperature);
-        }
+     }
 
-        for(ch = 0 ; ch < 4 ; ch ++){
-		//ts[ch].adc_value_target = c_to_code(ts[ch].temperature)*64;
-                displayChannel(ch, int(ts[ch].temperature_target), ts[ch].temperature, ts[ch].pwm_value); 
-                //displayChannel(ch, 1, 2, 3); 
-        }
+     for(ch = 0 ; ch < 4 ; ch ++){
+        //displayChannel(ch, int(ts[ch].temperature_target), ts[ch].temperature, (12.0*12.0/2.7)*(ts[ch].pwm_value)/128.0); 
+        displayChannel(ch, int(ts[ch].temperature_target), ts[ch].temperature, tomV((float)ts[ch].adc_value, ch)); 
+    }
 	
-	//setHeater(0, 1);
-	//digitalWrite(7, HIGH);
-	//transmitAnalogIn(&temperature, temperatures[0]);
 	delay(10);
-        commandLine();
-	printControlChannel(&ts[0]);
+    commandLine();
+	printControlChannel(&ts[1]);
 	//Serial.print("Ch0: "); Serial.print(ts[0].adc_value); 
     Serial.print(" Enc "); Serial.print (encoder0Pos >> 2, DEC);
 	Serial.print(" Iteration time "); Serial.print(micros()-rate); 
