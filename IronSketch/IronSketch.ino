@@ -66,7 +66,7 @@ const uint32_t tToV[19] = {0, 21430, 45377, 71631, 100008, 130286, 162293, 19586
 //table in 16.16 for converting mV to celcius. One point every 0.5 mV
 const uint32_t vToT[21] =  {0, 3114410, 5820835, 8266898, 10538541, 12681425, 14725620, 16692405, 18593499, 20447232, 22253590, 24026343, 25767091, 27484160, 29178644, 30855147, 32513138, 34160640, 35797002, 37423651, 39043960};
 
-volatile struct tipState ts[4] = {{0, 0, 0, 0, 150}, {0, 0, 0, 0, 150}, {0, 0, 0, 0, 150}, {0, 0, 0, 0, 150} };
+volatile struct tipState ts[4] = {{0, 0, 0, 0, 0}, {0, 0, 0, 0, 0}, {0, 0, 0, 0, 0}, {0, 0, 0, 0, 0} };
 
 LiquidCrystal_I2C lcd(0x27, 2, 1, 0, 4, 5, 6, 7, 3, POSITIVE);
 extern "C" {
@@ -160,7 +160,7 @@ void initLcd(){
 	lcd.begin(20,4);
 	lcd.backlight();
 	lcd.setCursor(0,0);
-	lcd.print("Welcome to CorboIron");
+	/*lcd.print("Welcome to CorboIron");
 
 	lcd.setCursor(0,2);
 	lcd.print("Version 0.000");
@@ -175,7 +175,7 @@ void initLcd(){
 		lcd.print(' ');
 		delay(10);
 	}
-
+*/
 }
 
 void doEncoderA(){
@@ -351,15 +351,19 @@ void setupAdc(){
 
 void setup()
 {
-	loadChannel(0);
-	loadChannel(1);
-	loadChannel(2);
-	loadChannel(3);
-	pinMode(ch1TempPin, INPUT);
-	pinMode(chargePumpPin, OUTPUT);
-	Serial.begin(115200);
+	for(int ch = 0 ; ch < 4 ; ch++){
+	loadChannel(ch);
+	pinMode(heaterPins[ch], OUTPUT);
+	digitalWrite(heaterPins[ch], LOW);
+	//loadChannel(1);
+	//loadChannel(2);
+	//loadChannel(3);
+	}
+	//pinMode(ch1TempPin, INPUT);
+	//pinMode(chargePumpPin, OUTPUT);
+	//Serial.begin(115200);
 	analogReference(DEFAULT);
-	analogWrite(chargePumpPin, 127);
+	//analogWrite(chargePumpPin, 127);
 	initLcd();
 	//digitalWrite(7, LOW);
 	pinMode(7, OUTPUT);
@@ -585,8 +589,8 @@ void controlChannel(volatile struct tipState *tip){
 	//Serial.print("Error: "); Serial.print(error); Serial.print(" ");
 	if(error < 0)
 		error = 0;
-	if(error > 128)
-		error = 128;
+	if(error > 85)
+		error = 85;
 	tip->pwm_value = error*1;
 } 
 

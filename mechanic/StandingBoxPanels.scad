@@ -881,7 +881,7 @@ module solderPenTpuSleeveUpper(){
 }
 //solderPenTpuSleeveLower();
 //translate([0,0,40])
-    solderPenTpuSleeveUpper();
+//    solderPenTpuSleeveUpper();
 //solderPenMainBody();
 //connectorStrainRelief();
 //crossOver();
@@ -906,8 +906,9 @@ module solderPenTpuSleeveUpper(){
 
 //xyCylinder(10,2,2);
 
+module completeAssembly(){
 //Bottom
-/*bottomPanel();
+bottomPanel();
 
 //Bottom Back
 translate([-3, 0, 3])
@@ -920,9 +921,9 @@ translate([120, 123, 3])
         wheelPanel();
 
 //Bottom left 
-//translate([120, 0-3, 123])
-//    rotate([-90, 90, 0])
-//        multiPanelIecHole();
+translate([120, 0-3, 123])
+    rotate([-90, 90, 0])
+        multiPanelIecHole();
 
 
 //Top Back
@@ -969,9 +970,31 @@ translate([89, 60-0.5, 130+100-8])
 translate([89, 120-0.5, 130+100-8])
     rotate([0,90,0])
     rotate([0,0,-90])
-        truncatedPenHolder();*/
+        truncatedPenHolder();
+    }
+    
+    
+module usbHolePattern(d){
+    cube([22, 15, d]);
+    translate([26, 15/2, 0]){
+        cylinder(d, 3/2, 3/2);
+    translate([-34, 0, 0])
+        cylinder(d, 3/2, 3/2);
+    }
+}
 
-//truncatedPenHolder();
+usbHolePattern(10);
+//completeAssembly();
+//bottomPanel(); //1x
+//backPanel(); //2x
+//multiPanelIecHole();  //1x
+//wheelPanel();  //1x
+//frontSmall(); //1x
+//displayPanel(); //1x
+//largeFrontPanel(); /1x
+//pcbPanel(); //1x
+//multiPanel(); //2x
+//truncatedPenHolder(); //2x
 //largeFrontPanel();
 //placedPowerSupply();
 
